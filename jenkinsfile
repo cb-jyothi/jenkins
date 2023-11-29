@@ -1,10 +1,52 @@
+provider "aws" {
+  region = "us-east1"
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-0230bd60aa48260c6"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "ExampleInstance"
+  }
+}
+
+
 pipeline {
-    agent { docker { image 'node:20.10.0-alpine3.18' } }
+    agent any
+    environment {
+        AWS_DEFAULT_REGION = 'us-east1'
+    }
     stages {
-        stage('build') {
+        stage('Checkout Code') {
             steps {
-                sh 'node --version'
+                checkout scm
             }
+        }
+        stage('Terraform Init') {
+            steps {
+                script {
+                    sh 'terraform init'
+                }
+            }
+        }
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+        stage('Terraform Apply') {
+            steps {
+                script {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
         }
     }
 }
